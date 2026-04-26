@@ -1,13 +1,186 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ai-recruiter-frontend</title>
-  </head>
-  <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Recruiter Agent</title>
+    
+    <!-- 1. Tailwind CSS (Cloud) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. React & Babel (Cloud) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 3. Axios for API calls -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+    
+    <!-- React will inject the app here -->
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+    <!-- 4. Your React Application -->
+    <script type="text/babel">
+        const { useState } = React;
+
+        function App() {
+            const [jobDesc, setJobDesc] = useState('We are looking for a fast-paced React Developer with 3+ years experience. Node.js is a plus.');
+            const [resumeLinks, setResumeLinks] = useState('https://linkedin.com/in/candidate1\nhttps://github.com/candidate2');
+            const [loading, setLoading] = useState(false);
+            const [data, setData] = useState(null);
+            const [chatModalCandidate, setChatModalCandidate] = useState(null);
+
+            const handleProcess = async () => {
+                setLoading(true);
+                try {
+                    const linksArray = resumeLinks.split('\n').filter(link => link.trim() !== '');
+                    const response = await axios.post('http://localhost:8000/api/process-recruitment', {
+                        job_description: jobDesc,
+                        resume_links: linksArray
+                    });
+                    setData(response.data);
+                } catch (error) {
+                    console.error("Error:", error);
+                    alert("Failed to connect to Backend. Is your FastAPI running on port 8000?");
+                }
+                setLoading(false);
+            };
+
+            return (
+                <div className="min-h-screen p-8">
+                    <div className="max-w-7xl mx-auto space-y-8">
+                        
+                        {/* Header & Inputs */}
+                        <div className="bg-white p-6 rounded-xl shadow border border-gray-100">
+                            <h1 className="text-3xl font-bold text-gray-800 mb-6">💼 AI Recruiter Agent</h1>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-semibold mb-2">Job Description</label>
+                                    <textarea 
+                                        className="w-full p-3 border rounded-lg h-32 focus:ring-2 focus:ring-blue-500"
+                                        value={jobDesc}
+                                        onChange={(e) => setJobDesc(e.target.value)}
+                                    ></textarea>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold mb-2">Resume Links</label>
+                                    <textarea 
+                                        className="w-full p-3 border rounded-lg h-32 focus:ring-2 focus:ring-blue-500"
+                                        value={resumeLinks}
+                                        onChange={(e) => setResumeLinks(e.target.value)}
+                                    ></textarea>
+                                </div>
+                            </div>
+                            
+                            <button 
+                                onClick={handleProcess}
+                                disabled={loading}
+                                className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg flex items-center gap-2"
+                            >
+                                {loading ? '⏳ AI is analyzing...' : '🌟 Discover & Screen Candidates'}
+                            </button>
+                        </div>
+
+                        {/* Results Section */}
+                        {data && (
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                                
+                                {/* Side Panel */}
+                                <div className="lg:col-span-1 bg-blue-50 border border-blue-100 p-6 rounded-xl h-fit">
+                                    <h3 className="text-lg font-bold text-blue-900 mb-4 border-b border-blue-200 pb-2">JD Analysis</h3>
+                                    <div className="space-y-4 text-sm">
+                                        <div><span className="font-semibold text-blue-800">Role:</span> <p>{data.jd_summary.role_type}</p></div>
+                                        <div><span className="font-semibold text-blue-800">Experience:</span> <p>{data.jd_summary.experience_level}</p></div>
+                                        <div>
+                                            <span className="font-semibold text-blue-800">Skills:</span>
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                {data.jd_summary.required_skills.map((s, i) => (
+                                                    <span key={i} className="bg-blue-200 text-blue-800 px-2 py-0.5 rounded text-xs">{s}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div><span className="font-semibold text-purple-800">Hidden Expectations:</span> <p className="italic">{data.jd_summary.hidden_expectations}</p></div>
+                                    </div>
+                                </div>
+
+                                {/* Main Table */}
+                                <div className="lg:col-span-3 bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-gray-100 text-sm uppercase text-gray-600 tracking-wider">
+                                                <th className="p-4 font-semibold">Candidate</th>
+                                                <th className="p-4 font-semibold">Match %</th>
+                                                <th className="p-4 font-semibold">Interest</th>
+                                                <th className="p-4 font-semibold">Score</th>
+                                                <th className="p-4 font-semibold">Status</th>
+                                                <th className="p-4 font-semibold">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {data.candidates.map((cand, idx) => (
+                                                <tr key={cand.id} className="hover:bg-gray-50">
+                                                    <td className="p-4">
+                                                        <div className="font-bold">#{idx + 1} {cand.name}</div>
+                                                        {cand.missing_skills.length > 0 && <div className="text-xs text-red-500">Missing: {cand.missing_skills.join(', ')}</div>}
+                                                    </td>
+                                                    <td className="p-4 font-medium">{cand.match_score}%</td>
+                                                    <td className="p-4">
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                                            cand.interest_level === 'High' ? 'bg-green-100 text-green-700' :
+                                                            cand.interest_level === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                                                        }`}>
+                                                            {cand.interest_level}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 font-black text-lg text-blue-900">{cand.final_score}</td>
+                                                    <td className="p-4 font-medium">
+                                                        {cand.status.includes('⭐') ? <span className="text-amber-500">⭐ Recommended</span> : <span className="text-red-500">⚠️ Risk</span>}
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <button onClick={() => setChatModalCandidate(cand)} className="text-blue-600 border border-blue-200 px-3 py-1 rounded hover:bg-blue-50 text-sm font-bold">
+                                                            💬 View Chat
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Chat Modal */}
+                        {chatModalCandidate && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                                <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[80vh]">
+                                    <div className="bg-blue-600 p-4 flex justify-between text-white rounded-t-2xl">
+                                        <h3 className="font-bold text-lg">AI Outreach Log</h3>
+                                        <button onClick={() => setChatModalCandidate(null)} className="font-bold text-xl hover:text-gray-200">✕</button>
+                                    </div>
+                                    <div className="p-6 overflow-y-auto space-y-4 bg-gray-50 flex-1">
+                                        {chatModalCandidate.chat_log.map((chat, idx) => (
+                                            <div key={idx} className={`flex ${chat.role === 'AI' ? 'justify-start' : 'justify-end'}`}>
+                                                <div className={`max-w-[80%] p-3 rounded-xl shadow-sm ${chat.role === 'AI' ? 'bg-white border text-gray-800' : 'bg-blue-600 text-white'}`}>
+                                                    <div className="text-xs font-bold mb-1 opacity-80">{chat.role === 'AI' ? '🤖 AI' : '👤 Candidate'}</div>
+                                                    <div className="text-sm">{chat.message}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
 </html>
